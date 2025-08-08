@@ -177,4 +177,11 @@ def main():
         sys.stdout.flush()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        # Clear the verbose output line before printing the exit message
+        if '--verbose' in sys.argv or '-v' in sys.argv:
+            sys.stdout.write("\r" + " " * 80 + "\r")
+        sys.stdout.write("\nInterrupted.\n")
+        sys.stdout.flush()
