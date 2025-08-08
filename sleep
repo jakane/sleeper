@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+
+import argparse
+import time
+from datetime import datetime, timedelta
+import sys
+
+def main():
+    """
+    Main function to parse arguments and execute the sleep logic.
+    """
+    parser = argparse.ArgumentParser(
+        description="Sleep for a specified duration or until a specified time.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+
+    # Arguments for specifying sleep duration or time
+    time_group = parser.add_mutually_exclusive_group()
+    time_group.add_argument(
+        "--until",
+        type=str,
+        help="Sleep until a specific time.\n"
+             "Format: [[YYYY-mm-ddT]HH:MM[:SS]].\n"
+             "Example: 10:30 or 2025-12-25T15:00"
+    )
+    time_group.add_argument(
+        "--duration",
+        type=str,
+        help="Sleep for a specified duration.\n"
+             "Format: [[[DDT]HH:]MM:]SS.\n"
+             "Example: 10 (10 seconds), 01:30 (1 minute 30 seconds), 1D01:00:00 (1 day, 1 hour)"
+    )
+    time_group.add_argument(
+        "duration_positional",
+        nargs='?',
+        type=str,
+        help="Sleep for a specified duration.\n"
+             "Format: [[[HH:]MM:]SS].\n"
+             "Example: 10 (10 seconds), 01:30 (1 minute 30 seconds)"
+    )
+
+    # Flag arguments
+    parser.add_argument("-v", "--verbose", action="store_true", help="Provide progress notifications.")
+    parser.add_argument("--debug", action="store_true", help="Explain how the sleep interval is decided.")
+
+    args = parser.parse_args()
+
+    sleep_seconds = 0
+    now = datetime.now()
+    duration_str = None
+    time_parts = None
+
+    if args.until:
+        try:
+            target_time_str = args.until
+            
+            if 'T' not in target_time_str and ':' in target_time_str and len(target_time_str.split(':')) == 2:
+                target_time_str += ":00"
+
+            if 'T' not in target_time_str:
+                target_time = datetime.strptime(target_time_str, "%H:%M:%S")
+                target_datetime = now.replace(
+                    hour=target_time.hour,
+                    minute=target_time.minute,
+                    second=target_time.second,
+                    microsecond=0
+                )
+            else:
+                target_datetime = datetime.strptime(target_time_str, "%Y-%m-%dT%H:%M:%S")
+
+            if target_datetime < now:
+                print("Error: The specified time is in the past.")
+                return
+
+            sleep_seconds = (target_datetime - now).total_seconds()
+        except ValueError:
+            print(f"Error: Invalid time format for --until: {args.until}")
+            return
+    
+    elif args.duration or args.duration_positional:
+        duration_str = args.duration if args.duration else args.duration_positional
+        
+        try:
+            if 'D' in duration_str:
+                parts = duration_str.split('D')
+                days = int(parts[0])
+                time_str = parts[1]
+            else:
+                days = 0
+                time_str = duration_str
+
+            time_parts = [int(p) for p in time_str.split(':')]
+            time_parts.reverse()
+
+            seconds = time_parts[0] if len(time_parts) > 0 else 0
+            minutes = time_parts[1] if len(time_parts) > 1 else 0
+            hours = time_parts[2] if len(time_parts) > 2 else 0
+
+            sleep_seconds = (days * 24 * 60 * 60) + (hours * 60 * 60) + (minutes * 60) + seconds
+        except (ValueError, IndexError):
+            print(f"Error: Invalid duration format: {duration_str}")
+            return
+            
+    else:
+        parser.print_help()
+        return
+
+    # Modular sleep logic: applies only to bare, positional arguments
+    is_positional_and_bare = args.duration_positional and not args.duration and time_parts and len(time_parts) == 1
+    if is_positional_and_bare and sleep_seconds > 0:
+        module_value = sleep_seconds
+        current_time_in_seconds = now.second + now.microsecond / 1_000_000
+        time_to_next_interval = module_value - (current_time_in_seconds % module_value)
+
+        if time_to_next_interval < 0.001:
+            time_to_next_interval = module_value
+
+        if args.debug:
+            print("--- Debug Information ---")
+            print(f"The positional argument '{duration_str}' triggered modular sleep logic.")
+            print(f"The requested interval is {module_value} seconds.")
+            print(f"Current time in the minute is {current_time_in_seconds:.3f} seconds.")
+            print(f"The initial sleep time of {sleep_seconds:.2f} seconds is being replaced.")
+            print(f"The calculated sleep time is {time_to_next_interval:.3f} seconds to reach the next interval.")
+            print("-------------------------")
+        
+        sleep_seconds = time_to_next_interval
+
+    # Final sleep check and output for regular sleep (non-modular)
+    if sleep_seconds <= 0:
+        if args.until:
+             print("The specified --until time has already passed.")
+        else:
+             print("Please specify a valid sleep duration or time.")
+        return
+
+    if args.debug and not is_positional_and_bare:
+        print("--- Debug Information ---")
+        if args.until:
+            print(f"The --until flag was used. The current time is {now.strftime('%Y-%m-%d %H:%M:%S')}.")
+            print(f"The target time is {target_datetime.strftime('%Y-%m-%d %H:%M:%S')}.")
+            print(f"The sleep interval is calculated as the difference: {sleep_seconds:.2f} seconds.")
+        else:
+            duration_source = "the --duration flag" if args.duration else "the positional argument"
+            print(f"The {duration_source} was used. The input duration was {duration_str}.")
+            print(f"This was parsed into a total sleep interval of {sleep_seconds:.2f} seconds.")
+        print("-------------------------")
+
+    total_slept = 0
+    while total_slept < sleep_seconds:
+        remaining = sleep_seconds - total_slept
+
+        if args.verbose:
+            remaining_td = timedelta(seconds=int(remaining))
+            sys.stdout.write(f"\r{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Sleeping for {remaining_td}")
+            sys.stdout.flush()
+
+        if remaining > 300:
+            next_sleep = 300
+        elif remaining > 60:
+            next_sleep = remaining % 60 if remaining % 60 != 0 else 60
+        elif remaining > 10:
+            next_sleep = remaining % 10 if remaining % 10 != 0 else 10
+        elif remaining > 0:
+            next_sleep = 1
+        else:
+            next_sleep = remaining
+        
+        if next_sleep > remaining:
+            next_sleep = remaining
+
+        time.sleep(next_sleep)
+        total_slept += next_sleep
+
+    if args.verbose:
+        sys.stdout.write("\r" + " " * 80 + "\r")
+        sys.stdout.flush()
+
+if __name__ == "__main__":
+    main()
