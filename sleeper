@@ -185,3 +185,4 @@ if __name__ == "__main__":
             sys.stdout.write("\r" + " " * 80 + "\r")
         sys.stdout.write("\nInterrupted.\n")
         sys.stdout.flush()
+        sys.exit(1)
