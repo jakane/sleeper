@@ -77,18 +77,24 @@ A thin executable script that adds `src/` to `sys.path` and calls `sleeper.cli.m
    - Always clear any carriage return (`\r`) lines before printing messages or exiting.
 4. **Drift-Free Timing**:
    - Always reference `time.monotonic()` for interval/duration tracking in loops rather than accumulating nominal sleep increments.
+5. **Always Use Python Virtual Environments**:
+   - Always create and use a dedicated virtual environment (`.venv/`) for local development, package builds, and testing. Never install packages or run tests directly against global system/Homebrew Python environments.
 
 ---
 
 ## 5. Testing & Verification
 
-Run the test suite using standard `unittest`:
+Always run tests within the project's virtual environment:
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests
-```
-Or if installed in editable mode (`pip install -e .`):
-```bash
-python3 -m unittest discover -s tests
+# Create and activate virtual environment (if not already present)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install in editable mode
+pip install -e .
+
+# Run test suite
+python -m unittest discover -v -s tests
 ```
 
 ### Manual CLI Checks

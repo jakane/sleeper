@@ -27,17 +27,19 @@ A smart, flexible command-line sleep utility written in Python. `sleeper` extend
 - Python 3.8+ installed.
 
 ### Option 1: Standard Python Package Installation (Recommended)
-Install directly into your Python environment:
+Set up and activate a virtual environment, then install:
 ```bash
-pip install .
-```
+python3 -m venv .venv
+source .venv/bin/activate
 
-Or for development (editable mode):
-```bash
+# Install package
+pip install .
+
+# Or for development (editable mode)
 pip install -e .
 ```
 
-Or via [pipx](https://pypa.github.io/pipx/):
+Or install as an isolated CLI tool via [pipx](https://pypa.github.io/pipx/):
 ```bash
 pipx install .
 ```
