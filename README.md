@@ -1,15 +1,20 @@
 # sleeper
 
-A smart, flexible command-line sleep utility written in Python. `sleeper` extends standard Unix `sleep` with human-friendly duration parsing, wall-clock time targeting, synchronized interval snapping ("modular sleep"), and dynamic countdown progress.
+A smart, flexible command-line sleep utility written in Python. `sleeper` extends standard Unix `sleep` with human-friendly duration parsing, wall-clock time targeting with automatic rollover, synchronized interval snapping ("modular sleep"), and dynamic countdown progress.
 
 ---
 
 ## Features
 
 - **Flexible Duration Formats**: Specify durations in seconds (`10`), minutes and seconds (`01:30`), hours (`01:00:00`), or days (`1D04:00:00`).
-- **Sleep Until a Specific Time (`--until`)**: Sleep until an exact time of day (`14:30`) or a specific calendar timestamp (`2026-12-25T08:00:00` or `2026-12-25T08:00`).
-- **Modular Interval Snapping (Clock Alignment)**: Provide a bare positional duration (e.g., `sleeper 10`) to automatically synchronize with the next clock boundary (e.g., `:00`, `:10`, `:20`, `:30`, `:40`, `:50`). Perfect for keeping periodic loops aligned to real-time intervals.
-- **Adaptive Visual Countdown (`-v`, `--verbose`)**: Displays a clean, in-place countdown timer in the terminal that dynamically updates as time elapses without clock drift.
+- **Sleep Until a Specific Time (`--until`)**: Sleep until an exact time of day (`14:30`) or a specific calendar timestamp (`2026-12-25T08:00:00`).
+- **Smart Next-Day Rollover**: If a daily clock time passed to `--until` has already occurred today (e.g., `--until 08:00` run in the afternoon), `sleeper` automatically rolls over to target that time tomorrow.
+- **Multi-Scale Modular Interval Snapping**: Provide a bare positional duration to synchronize with clock boundaries:
+  - $\le 60\text{s}$ (e.g., `sleeper 10`): Snaps to `:00, :10, :20, :30, :40, :50` within the minute.
+  - `sleeper 60`: Snaps directly to the **top of the next minute** (`:00`).
+  - $> 60\text{s}$ (e.g., `sleeper 300` or `sleeper 900`): Snaps to 5-minute or quarter-hour clock boundaries on the wall clock.
+  - Multi-hour (e.g., `sleeper 7200`): Snaps to 2-hour boundaries relative to midnight.
+- **Adaptive Visual Countdown (`-v`, `--verbose`)**: Displays a clean, in-place countdown timer in the terminal that dynamically updates as time elapses without clock drift (powered by `time.monotonic()`).
 - **Debug Explanation (`--debug`)**: Inspect how your input string was parsed and how the target sleep duration was calculated.
 - **Clean Signal Handling**: Gracefully catches `Ctrl+C` (`SIGINT`), erasing verbose terminal lines and exiting cleanly with code 1 without dumping Python tracebacks.
 - **Zero Runtime Dependencies**: Built entirely with the Python standard library.
@@ -66,7 +71,7 @@ python3 -m sleeper [options]
 | :--- | :--- |
 | `duration_positional` | Sleep for a duration (`SS`, `MM:SS`, or `HH:MM:SS`). A single integer activates **modular sleep**. |
 | `--duration DURATION` | Sleep for a specified duration (`[[[DD]D]HH:]MM:]SS`). Does not snap to clock intervals. |
-| `--until UNTIL` | Sleep until a target time (`HH:MM`, `HH:MM:SS`, or `YYYY-mm-ddTHH:MM[:SS]`). |
+| `--until UNTIL` | Sleep until a target time (`HH:MM`, `HH:MM:SS`, or `YYYY-mm-ddTHH:MM[:SS]`). Automatically rolls over past daily times to tomorrow. |
 | `-v`, `--verbose` | Print a live countdown timer updating in-place. |
 | `--debug` | Display detailed calculation info before sleeping. |
 | `-h`, `--help` | Show command usage and argument definitions. |
@@ -92,29 +97,44 @@ sleeper 02:15:30
 ```
 
 ### 2. Modular Sleep (Loop Synchronization)
-When writing shell loops, standard `sleep 10` causes timing drift because each loop iteration takes non-zero execution time.
+Standard `sleep` causes cumulative timing drift in loops because script execution takes non-zero time. 
 
-Using bare positional seconds in `sleeper` automatically aligns execution to the next clock interval within the minute:
+Passing a bare positional integer activates modular snapping:
 ```bash
-# Runs every 10 seconds, aligned to :00, :10, :20, :30, :40, :50 seconds on the clock
+# Sleep to the top of the next minute (:00)
+sleeper 60
+
+# Runs every 10 seconds, aligned to :00, :10, :20, :30, :40, :50
 while true; do
     ./fetch-metrics.sh
     sleeper 10
 done
+
+# Aligns execution to every 5-minute mark on the clock (:00, :05, :10, :15...)
+while true; do
+    ./sync-data.sh
+    sleeper 300
+done
 ```
 
-To sleep for a fixed duration without modular snapping, use the `--duration` flag:
+To sleep for a fixed duration without modular snapping, use `--duration` or a formatted string:
 ```bash
-sleeper --duration 10
+sleeper --duration 60
+sleeper 01:00
 ```
 
-### 3. Target Time (`--until`)
+### 3. Target Time (`--until`) & Automatic Rollover
 Sleep until 4:30 PM today:
 ```bash
 sleeper --until 16:30
 ```
 
-Sleep until a specific future date and time:
+If it is currently 3:00 PM and you specify `--until 08:00`, `sleeper` automatically rolls over to 8:00 AM tomorrow:
+```bash
+sleeper --until 08:00
+```
+
+Sleep until a specific calendar date and time:
 ```bash
 sleeper --until 2026-12-31T23:59:00
 ```
@@ -127,16 +147,16 @@ sleeper -v 05:00
 
 Inspect calculation logic with `--debug`:
 ```bash
-sleeper --debug 10
+sleeper --debug 60
 ```
 *Output:*
 ```text
 --- Debug Information ---
-The positional argument '10' triggered modular sleep logic.
-The requested interval is 10.00 seconds.
-Current time in the minute is 34.215 seconds.
-The initial sleep time of 10.00 seconds is being replaced.
-The calculated sleep time is 5.785 seconds to reach the next interval.
+The positional argument '60' triggered modular sleep logic.
+The requested interval is 60.00 seconds.
+Current time in the minute is 34.875 seconds.
+The initial sleep time of 60.00 seconds is being replaced.
+The calculated sleep time is 25.125 seconds to reach the next interval.
 -------------------------
 ```
 

@@ -10,7 +10,8 @@ This document provides context, architectural guidelines, development practices,
 - **Zero third-party dependencies**: Implemented purely using the Python 3 standard library.
 - **Fast and lightweight**: Minimal import overhead for instant CLI invocation.
 - **Standard Python Packaging**: Configured via `pyproject.toml` (PEP 517/621) with console script entry points.
-- **Clock-synchronized ("Modular sleep")**: Capable of synchronizing periodic loops to wall-clock intervals (e.g. `:00, :10, :20, :30...`).
+- **Clock-synchronized ("Modular sleep")**: Capable of synchronizing periodic loops to multi-scale wall-clock intervals (seconds within minute, minutes within hour, hours within day).
+- **Intelligent Target Sleep**: Automatically rolls past daily target times to the following day.
 - **Interactive & Observant**: Features an in-place visual countdown timer (`-v`) and calculation introspection (`--debug`).
 
 ---
@@ -44,8 +45,11 @@ sleeper/
 ### `src/sleeper/core.py`
 Contains pure computation and execution functions:
 - `parse_duration(duration_str: str) -> float`: Parses `SS`, `MM:SS`, `HH:MM:SS`, and `[D]D[T][time_str]` formats into seconds.
-- `parse_until(until_str: str, now: datetime | None = None) -> tuple[float, datetime]`: Parses clock time (`HH:MM[:SS]`) and ISO timestamps (`YYYY-MM-DDTHH:MM[:SS]`), returning duration and target datetime.
-- `calculate_modular_sleep(interval: float, now: datetime | None = None) -> float`: Calculates delta in seconds to snap to the next clock multiple within the current minute.
+- `parse_until(until_str: str, now: datetime | None = None, auto_rollover: bool = True) -> tuple[float, datetime]`: Parses clock time (`HH:MM[:SS]`) and ISO timestamps (`YYYY-MM-DDTHH:MM[:SS]`). Automatically rolls past clock times to tomorrow when `auto_rollover` is enabled.
+- `calculate_modular_sleep(interval: float, now: datetime | None = None) -> float`: Multi-scale clock snapping:
+  - $\le 60\text{s}$: Snaps within the current minute (e.g. `10` -> `:00, :10, :20...`; `60` -> top of the minute).
+  - $60\text{s} < \text{interval} \le 3600\text{s}$: Snaps within the current hour (e.g. `300` -> 5-minute boundaries `:00, :05, :10...`).
+  - $> 3600\text{s}$: Snaps within the current day relative to midnight.
 - `execute_sleep(sleep_seconds: float, verbose: bool = False) -> None`: Runs an adaptive sleep loop using `time.monotonic()` to eliminate timing drift while providing in-place countdown updates (`\r`).
 
 ### `src/sleeper/cli.py`
@@ -91,7 +95,9 @@ python3 -m unittest discover -s tests
 ```bash
 # Verify launcher directly
 ./sleeper --help
-./sleeper --debug 10
+./sleeper --debug 60    # Snaps to top of minute
+./sleeper --debug 300   # Snaps to 5-minute mark
+./sleeper --debug --until 08:00  # Verifies tomorrow rollover if run after 8am
 
 # Verify module execution
 PYTHONPATH=src python3 -m sleeper --help
@@ -99,12 +105,3 @@ PYTHONPATH=src python3 -m sleeper --help
 # Verify unit tests pass with zero errors
 PYTHONPATH=src python3 -m unittest discover -s tests
 ```
-
----
-
-## 6. Known Quirks & Future Backlog
-
-1. **Multi-minute Modular Snapping**:
-   - Modular sleep currently aligns within `now.second` (0–59s). Bare positional values > 60s do not snap across minute or hour boundaries.
-2. **Next-day Rollover for `--until`**:
-   - When a daily time like `--until 09:00` is passed after 9:00 AM, it currently errors as past. A future `--next` or auto-rollover flag could roll to tomorrow automatically.

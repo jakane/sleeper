@@ -59,20 +59,30 @@ class TestParseUntil(unittest.TestCase):
 
     def test_iso_timestamp(self):
         now = datetime(2026, 10, 6, 14, 0, 0)
-        # Without seconds (previously failed in original sleeper)
         seconds, target_dt = parse_until("2026-10-06T15:00", now=now)
         self.assertEqual(seconds, 3600.0)
         self.assertEqual(target_dt, datetime(2026, 10, 6, 15, 0, 0))
 
-        # With seconds
         seconds, target_dt = parse_until("2026-10-06T15:00:45", now=now)
         self.assertEqual(seconds, 3645.0)
         self.assertEqual(target_dt, datetime(2026, 10, 6, 15, 0, 45))
 
-    def test_past_time_raises(self):
+    def test_past_clock_time_rolls_over_to_tomorrow(self):
+        now = datetime(2026, 10, 6, 14, 0, 0)
+        # 13:00 has already passed today; rolls over to 13:00 tomorrow (23 hours = 82800s)
+        seconds, target_dt = parse_until("13:00", now=now, auto_rollover=True)
+        self.assertEqual(seconds, 82800.0)
+        self.assertEqual(target_dt, datetime(2026, 10, 7, 13, 0, 0))
+
+    def test_past_clock_time_without_rollover_raises(self):
         now = datetime(2026, 10, 6, 14, 0, 0)
         with self.assertRaises(ValueError):
-            parse_until("13:59:59", now=now)
+            parse_until("13:00", now=now, auto_rollover=False)
+
+    def test_past_calendar_datetime_raises(self):
+        now = datetime(2026, 10, 6, 14, 0, 0)
+        with self.assertRaises(ValueError):
+            parse_until("2026-10-05T13:00", now=now, auto_rollover=True)
 
     def test_invalid_time_format(self):
         with self.assertRaises(ValueError):
@@ -82,22 +92,42 @@ class TestParseUntil(unittest.TestCase):
 
 
 class TestModularSleep(unittest.TestCase):
-    def test_modulo_calculation(self):
-        # Current second is 14.0, interval is 10 -> next interval at 20.0 (6.0s remaining)
+    def test_sub_minute_modulo(self):
         now = datetime(2026, 10, 6, 14, 0, 14, 0)
         remaining = calculate_modular_sleep(10.0, now=now)
         self.assertAlmostEqual(remaining, 6.0)
 
-        # Current second is 14.25
         now = datetime(2026, 10, 6, 14, 0, 14, 250000)
         remaining = calculate_modular_sleep(10.0, now=now)
         self.assertAlmostEqual(remaining, 5.75)
 
     def test_boundary_snaps_to_full_interval(self):
-        # Exactly on the boundary (second 20.0) -> next is 30.0 (10.0s remaining)
         now = datetime(2026, 10, 6, 14, 0, 20, 0)
         remaining = calculate_modular_sleep(10.0, now=now)
         self.assertAlmostEqual(remaining, 10.0)
+
+    def test_top_of_minute_modulo(self):
+        now = datetime(2026, 10, 6, 14, 5, 25, 0)
+        remaining = calculate_modular_sleep(60.0, now=now)
+        self.assertAlmostEqual(remaining, 35.0)
+
+    def test_multi_minute_snapping_5_minutes(self):
+        # 14:02:15 -> next 5m mark is 14:05:00 (165s remaining)
+        now = datetime(2026, 10, 6, 14, 2, 15, 0)
+        remaining = calculate_modular_sleep(300.0, now=now)
+        self.assertAlmostEqual(remaining, 165.0)
+
+    def test_quarter_hour_snapping_15_minutes(self):
+        # 14:08:00 -> next 15m mark is 14:15:00 (420s remaining)
+        now = datetime(2026, 10, 6, 14, 8, 0, 0)
+        remaining = calculate_modular_sleep(900.0, now=now)
+        self.assertAlmostEqual(remaining, 420.0)
+
+    def test_multi_hour_snapping(self):
+        # 09:15:00 -> next 2h mark is 10:00:00 (45m = 2700s remaining)
+        now = datetime(2026, 10, 6, 9, 15, 0, 0)
+        remaining = calculate_modular_sleep(7200.0, now=now)
+        self.assertAlmostEqual(remaining, 2700.0)
 
 
 class TestExecuteSleep(unittest.TestCase):
