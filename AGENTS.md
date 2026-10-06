@@ -21,11 +21,11 @@ This document provides context, architectural guidelines, development practices,
 ```text
 sleeper/
 ├── pyproject.toml         # PEP 517/621 build config & script entry point (sleeper = sleeper.cli:main)
+├── Makefile               # Virtual environment automation (make test, make build, etc.)
 ├── .gitignore             # Git ignore patterns for Python, builds, tests
 ├── README.md              # User manual, installation, and usage examples
 ├── AGENTS.md              # Developer and agent guidance (this file)
-├── install.sh             # Shell script symlinking ./sleeper to ~/.local/bin/sleeper
-├── sleeper                # Root executable launcher (convenient for local dev & symlinks)
+├── install.sh             # Shell script symlinking .venv/bin/sleeper to ~/.local/bin/sleeper
 ├── src/
 │   └── sleeper/
 │       ├── __init__.py    # Package definition & __version__
@@ -59,9 +59,6 @@ Handles command-line interactions:
 
 ### `src/sleeper/__main__.py`
 Allows direct module execution via `python3 -m sleeper`.
-
-### `sleeper` (Root Launcher)
-A thin executable script that adds `src/` to `sys.path` and calls `sleeper.cli.main()`. This allows immediate local execution (`./sleeper`) and preserves backward compatibility with `install.sh`.
 
 ---
 
@@ -99,15 +96,18 @@ python -m unittest discover -v -s tests
 
 ### Manual CLI Checks
 ```bash
-# Verify launcher directly
-./sleeper --help
-./sleeper --debug 60    # Snaps to top of minute
-./sleeper --debug 300   # Snaps to 5-minute mark
-./sleeper --debug --until 08:00  # Verifies tomorrow rollover if run after 8am
+# Verify venv executable directly
+.venv/bin/sleeper --help
+.venv/bin/sleeper --debug 60    # Snaps to top of minute
+.venv/bin/sleeper --debug 300   # Snaps to 5-minute mark
+.venv/bin/sleeper --debug --until 08:00  # Verifies tomorrow rollover if run after 8am
+
+# Or with active virtual environment
+sleeper --version
 
 # Verify module execution
-PYTHONPATH=src python3 -m sleeper --help
+python3 -m sleeper --help
 
 # Verify unit tests pass with zero errors
-PYTHONPATH=src python3 -m unittest discover -s tests
+make test
 ```

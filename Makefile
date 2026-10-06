@@ -31,7 +31,7 @@ $(VENV)/bin/activate:
 venv: $(VENV)/bin/activate
 
 install: $(VENV)/bin/activate
-	$(VENV_PIP) install -e .
+	$(VENV_PIP) install --no-build-isolation -e .
 
 dev: install
 	$(VENV_PIP) install build setuptools
@@ -50,5 +50,5 @@ clean:
 distclean: clean
 	rm -rf $(VENV)
 
-install-user:
+install-user: install
 	./install.sh
