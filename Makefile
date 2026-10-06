@@ -52,6 +52,7 @@ distclean: clean
 
 install-user: install
 	mkdir -p $(HOME)/.local/bin
+	rm -f $(HOME)/.local/bin/sleeper
 	cp -f $(VENV)/bin/sleeper $(HOME)/.local/bin/sleeper
 	chmod +x $(HOME)/.local/bin/sleeper
 	@echo "Copied sleeper executable to $(HOME)/.local/bin/sleeper"
