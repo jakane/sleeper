@@ -1,9 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-DEST=~/.local/bin
-SRC=$(cd "$(dirname $0)" && pwd)
+DEST="${HOME}/.local/bin"
+SRC=$(cd "$(dirname "$0")" && pwd)
 
-mkdir -p $DEST
+mkdir -p "$DEST"
 
-ln -sv $SRC/sleeper $DEST
+ln -sfv "$SRC/sleeper" "$DEST/sleeper"
+
+echo "Installed sleeper to $DEST/sleeper"
