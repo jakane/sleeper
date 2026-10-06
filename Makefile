@@ -23,7 +23,7 @@ help:
 	@echo "  build         Clean and build sdist and wheel packages"
 	@echo "  clean         Remove build artifacts and Python bytecode caches"
 	@echo "  distclean     Run clean and remove .venv directory"
-	@echo "  install-user  Symlink sleeper executable to ~/.local/bin"
+	@echo "  install-user  Copy sleeper executable to ~/.local/bin"
 
 $(VENV)/bin/activate:
 	$(PYTHON) -m venv $(VENV)
@@ -51,4 +51,7 @@ distclean: clean
 	rm -rf $(VENV)
 
 install-user: install
-	./install.sh
+	mkdir -p $(HOME)/.local/bin
+	cp -f $(VENV)/bin/sleeper $(HOME)/.local/bin/sleeper
+	chmod +x $(HOME)/.local/bin/sleeper
+	@echo "Copied sleeper executable to $(HOME)/.local/bin/sleeper"

@@ -44,10 +44,10 @@ Or install as an isolated CLI tool via [pipx](https://pypa.github.io/pipx/):
 pipx install .
 ```
 
-### Option 2: Symlink to User Bin
-Use the included install script to symlink `sleeper` into `~/.local/bin`:
+### Option 2: Copy to User Bin
+Install into your virtual environment and copy the executable to `~/.local/bin`:
 ```bash
-./install.sh
+make install-user
 ```
 Ensure `~/.local/bin` is in your shell's `PATH`:
 ```bash

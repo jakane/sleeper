@@ -25,7 +25,6 @@ sleeper/
 ├── .gitignore             # Git ignore patterns for Python, builds, tests
 ├── README.md              # User manual, installation, and usage examples
 ├── AGENTS.md              # Developer and agent guidance (this file)
-├── install.sh             # Shell script symlinking .venv/bin/sleeper to ~/.local/bin/sleeper
 ├── src/
 │   └── sleeper/
 │       ├── __init__.py    # Package definition & __version__
