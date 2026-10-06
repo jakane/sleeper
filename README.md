@@ -57,7 +57,7 @@ export PATH="$HOME/.local/bin:$PATH"
 ## Usage
 
 ```text
-sleeper [-h] [-v] [--debug] [--until UNTIL | --duration DURATION | duration_positional]
+sleeper [-h] [-v] [-V] [--debug] [--until UNTIL | --duration DURATION | duration_positional]
 ```
 
 Or invoke as a Python module:
@@ -74,6 +74,7 @@ python3 -m sleeper [options]
 | `--until UNTIL` | Sleep until a target time (`HH:MM`, `HH:MM:SS`, or `YYYY-mm-ddTHH:MM[:SS]`). Automatically rolls over past daily times to tomorrow. |
 | `-v`, `--verbose` | Print a live countdown timer updating in-place. |
 | `--debug` | Display detailed calculation info before sleeping. |
+| `-V`, `--version` | Show program version and exit. |
 | `-h`, `--help` | Show command usage and argument definitions. |
 
 ---

@@ -38,6 +38,19 @@ class TestCLIParser(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 self.parser.parse_args(["--until", "16:00", "--duration", "10"])
 
+    def test_version_flags(self):
+        with patch("sys.stdout", new=StringIO()) as fake_stdout:
+            with self.assertRaises(SystemExit) as cm:
+                self.parser.parse_args(["--version"])
+            self.assertEqual(cm.exception.code, 0)
+            self.assertIn("sleeper 0.0.1", fake_stdout.getvalue())
+
+        with patch("sys.stdout", new=StringIO()) as fake_stdout:
+            with self.assertRaises(SystemExit) as cm:
+                self.parser.parse_args(["-V"])
+            self.assertEqual(cm.exception.code, 0)
+            self.assertIn("sleeper 0.0.1", fake_stdout.getvalue())
+
 
 class TestCLIMain(unittest.TestCase):
     def test_no_args_prints_help(self):
