@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sleeper"
-version = "0.0.1"
+version = "0.0.2"
 description = "A smart command-line sleep utility with interval synchronization and live countdowns."
 readme = "README.md"
 requires-python = ">=3.8"

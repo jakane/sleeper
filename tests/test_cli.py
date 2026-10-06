@@ -6,6 +6,7 @@ from io import StringIO
 import sys
 from datetime import datetime
 
+from sleeper import __version__
 from sleeper.cli import build_parser, main
 
 
@@ -43,13 +44,13 @@ class TestCLIParser(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 self.parser.parse_args(["--version"])
             self.assertEqual(cm.exception.code, 0)
-            self.assertIn("sleeper 0.0.1", fake_stdout.getvalue())
+            self.assertIn(f"sleeper {__version__}", fake_stdout.getvalue())
 
         with patch("sys.stdout", new=StringIO()) as fake_stdout:
             with self.assertRaises(SystemExit) as cm:
                 self.parser.parse_args(["-V"])
             self.assertEqual(cm.exception.code, 0)
-            self.assertIn("sleeper 0.0.1", fake_stdout.getvalue())
+            self.assertIn(f"sleeper {__version__}", fake_stdout.getvalue())
 
 
 class TestCLIMain(unittest.TestCase):
