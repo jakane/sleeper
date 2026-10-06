@@ -54,7 +54,7 @@ Contains pure computation and execution functions:
 
 ### `src/sleeper/cli.py`
 Handles command-line interactions:
-- `build_parser() -> argparse.ArgumentParser`: Configures flags and mutually exclusive groups (`--until`, `--duration`, `duration_positional`).
+- `build_parser() -> argparse.ArgumentParser`: Configures flags (`-v`, `--debug`, `-V`/`--version`) and mutually exclusive groups (`--until`, `--duration`, `duration_positional`).
 - `main(argv=None) -> int`: Parses arguments, dispatches to `core` functions, formats `--debug` output, intercepts `KeyboardInterrupt` for clean terminal teardown, and returns POSIX exit codes (`0` or `1`).
 
 ### `src/sleeper/__main__.py`

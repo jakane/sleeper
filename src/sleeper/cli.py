@@ -4,6 +4,7 @@ import argparse
 import sys
 from datetime import datetime
 
+from sleeper import __version__
 from sleeper.core import (
     calculate_modular_sleep,
     execute_sleep,
@@ -18,6 +19,13 @@ def build_parser() -> argparse.ArgumentParser:
         prog="sleeper",
         description="Sleep for a specified duration or until a specified time.",
         formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    parser.add_argument(
+        "-V", "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show program's version number and exit.",
     )
 
     time_group = parser.add_mutually_exclusive_group()
