@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sleeper"
+version = "0.2.0"
+description = "A smart command-line sleep utility with interval synchronization and live countdowns."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "John Kane", email = "John.Kane@Kane.net"}
+]
+keywords = ["sleep", "timer", "interval", "cli", "schedule", "cron"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Utilities",
+]
+
+[project.scripts]
+sleeper = "sleeper.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
