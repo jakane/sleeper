@@ -8,7 +8,7 @@ version = "0.0.1"
 description = "A smart command-line sleep utility with interval synchronization and live countdowns."
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "John Kane", email = "John.Kane@Kane.net"}
 ]
