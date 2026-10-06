@@ -26,7 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         help="Sleep until a specific time.\n"
              "Format: [[YYYY-mm-ddT]HH:MM[:SS]].\n"
-             "Example: 10:30 or 2025-12-25T15:00",
+             "Example: 10:30 (today or tomorrow) or 2025-12-25T15:00",
     )
     time_group.add_argument(
         "--duration",
@@ -41,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         help="Sleep for a specified duration.\n"
              "Format: [[[HH:]MM:]SS].\n"
-             "Example: 10 (10 seconds), 01:30 (1 minute 30 seconds)",
+             "Example: 10 (10 seconds), 01:30 (1 minute 30 seconds), 300 (snap to 5m)",
     )
 
     parser.add_argument("-v", "--verbose", action="store_true", help="Provide progress notifications.")
@@ -67,7 +67,7 @@ def main(argv=None) -> int:
 
     try:
         if args.until:
-            sleep_seconds, target_datetime = parse_until(args.until, now=now)
+            sleep_seconds, target_datetime = parse_until(args.until, now=now, auto_rollover=True)
         else:
             duration_str = args.duration if args.duration else args.duration_positional
             sleep_seconds = parse_duration(duration_str)
@@ -85,11 +85,21 @@ def main(argv=None) -> int:
                 time_to_next = calculate_modular_sleep(module_value, now=now)
 
                 if args.debug:
-                    current_time_in_seconds = now.second + now.microsecond / 1_000_000
+                    sub_sec = now.microsecond / 1_000_000
+                    if module_value <= 60:
+                        scale_name = "minute"
+                        offset_val = now.second + sub_sec
+                    elif module_value <= 3600:
+                        scale_name = "hour"
+                        offset_val = (now.minute * 60) + now.second + sub_sec
+                    else:
+                        scale_name = "day"
+                        offset_val = (now.hour * 3600) + (now.minute * 60) + now.second + sub_sec
+
                     print("--- Debug Information ---")
                     print(f"The positional argument '{duration_str}' triggered modular sleep logic.")
                     print(f"The requested interval is {module_value:.2f} seconds.")
-                    print(f"Current time in the minute is {current_time_in_seconds:.3f} seconds.")
+                    print(f"Current time in the {scale_name} is {offset_val:.3f} seconds.")
                     print(f"The initial sleep time of {sleep_seconds:.2f} seconds is being replaced.")
                     print(f"The calculated sleep time is {time_to_next:.3f} seconds to reach the next interval.")
                     print("-------------------------")
@@ -112,6 +122,8 @@ def main(argv=None) -> int:
         if args.until and target_datetime:
             print(f"The --until flag was used. The current time is {now.strftime('%Y-%m-%d %H:%M:%S')}.")
             print(f"The target time is {target_datetime.strftime('%Y-%m-%d %H:%M:%S')}.")
+            if target_datetime.date() > now.date():
+                print("The target time was in the past for today; rolled over to tomorrow.")
             print(f"The sleep interval is calculated as the difference: {sleep_seconds:.2f} seconds.")
         else:
             source = "The --duration flag" if args.duration else "The positional argument"

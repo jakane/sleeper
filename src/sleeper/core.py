@@ -44,7 +44,7 @@ def parse_duration(duration_str: str) -> float:
     return float((days * 86400) + (hours * 3600) + (minutes * 60) + seconds)
 
 
-def parse_until(until_str: str, now: datetime | None = None) -> tuple[float, datetime]:
+def parse_until(until_str: str, now: datetime | None = None, auto_rollover: bool = True) -> tuple[float, datetime]:
     """
     Calculate sleep duration in seconds until a target time or timestamp.
 
@@ -53,6 +53,12 @@ def parse_until(until_str: str, now: datetime | None = None) -> tuple[float, dat
       - HH:MM:SS (e.g. "14:30:00")
       - YYYY-MM-DDTHH:MM (e.g. "2026-10-06T15:00")
       - YYYY-MM-DDTHH:MM:SS (e.g. "2026-10-06T15:00:00")
+
+    When given a daily clock time without a date that has already passed today:
+      - If auto_rollover is True, rolls over to tomorrow.
+      - If auto_rollover is False, raises ValueError.
+
+    Explicit calendar datetimes in the past always raise ValueError.
 
     Returns:
       (sleep_seconds, target_datetime)
@@ -80,6 +86,12 @@ def parse_until(until_str: str, now: datetime | None = None) -> tuple[float, dat
             second=target_time.second,
             microsecond=0
         )
+
+        if target_datetime < now:
+            if auto_rollover:
+                target_datetime += timedelta(days=1)
+            else:
+                raise ValueError("The specified time is in the past.")
     else:
         date_part, time_part = target_str.split('T', 1)
         if len(time_part.split(':')) == 2:
@@ -89,8 +101,8 @@ def parse_until(until_str: str, now: datetime | None = None) -> tuple[float, dat
         except ValueError as err:
             raise ValueError(f"Invalid time format for --until: {until_str}") from err
 
-    if target_datetime < now:
-        raise ValueError("The specified time is in the past.")
+        if target_datetime < now:
+            raise ValueError("The specified time is in the past.")
 
     sleep_seconds = (target_datetime - now).total_seconds()
     return sleep_seconds, target_datetime
@@ -98,9 +110,11 @@ def parse_until(until_str: str, now: datetime | None = None) -> tuple[float, dat
 
 def calculate_modular_sleep(interval: float, now: datetime | None = None) -> float:
     """
-    Calculate the remaining seconds to reach the next clock multiple within the current minute.
+    Calculate the remaining seconds to reach the next clock multiple.
 
-    For example, if interval is 10 and current time is 14.5s, the next multiple is 20s (remaining: 5.5s).
+    - interval <= 60: Snaps to multiples within the current minute (e.g. 10s -> :00, :10, :20, :30, :40, :50).
+    - 60 < interval <= 3600: Snaps to multiples within the current hour (e.g. 300s [5m] -> :00, :05, :10, :15...).
+    - interval > 3600: Snaps to multiples relative to midnight (e.g. 7200s [2h] -> 02:00, 04:00, 06:00...).
     """
     if interval <= 0:
         raise ValueError("Modular sleep interval must be positive.")
@@ -108,8 +122,16 @@ def calculate_modular_sleep(interval: float, now: datetime | None = None) -> flo
     if now is None:
         now = datetime.now()
 
-    current_time_in_seconds = now.second + now.microsecond / 1_000_000
-    time_to_next_interval = interval - (current_time_in_seconds % interval)
+    sub_second = now.microsecond / 1_000_000
+
+    if interval <= 60:
+        current_offset = now.second + sub_second
+    elif interval <= 3600:
+        current_offset = (now.minute * 60) + now.second + sub_second
+    else:
+        current_offset = (now.hour * 3600) + (now.minute * 60) + now.second + sub_second
+
+    time_to_next_interval = interval - (current_offset % interval)
 
     if time_to_next_interval < 0.001:
         time_to_next_interval = interval

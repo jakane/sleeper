@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 from io import StringIO
 import sys
+from datetime import datetime
 
 from sleeper.cli import build_parser, main
 
@@ -33,7 +34,6 @@ class TestCLIParser(unittest.TestCase):
         self.assertEqual(args.until, "16:00")
 
     def test_mutually_exclusive_flags(self):
-        # Capturing stderr to suppress argparse error message
         with patch("sys.stderr", new=StringIO()):
             with self.assertRaises(SystemExit):
                 self.parser.parse_args(["--until", "16:00", "--duration", "10"])
@@ -76,6 +76,19 @@ class TestCLIMain(unittest.TestCase):
             output = fake_stdout.getvalue()
             self.assertIn("--- Debug Information ---", output)
             self.assertIn("triggered modular sleep logic", output)
+            mock_execute.assert_called_once()
+
+    @patch("sleeper.cli.datetime")
+    @patch("sleeper.cli.execute_sleep")
+    def test_until_rollover_debug_output(self, mock_execute, mock_datetime):
+        # Mock now to 14:00:00
+        mock_datetime.now.return_value = datetime(2026, 10, 6, 14, 0, 0)
+        with patch("sys.stdout", new=StringIO()) as fake_stdout:
+            exit_code = main(["--debug", "--until", "13:00"])
+            self.assertEqual(exit_code, 0)
+            output = fake_stdout.getvalue()
+            self.assertIn("--- Debug Information ---", output)
+            self.assertIn("rolled over to tomorrow", output)
             mock_execute.assert_called_once()
 
 
