@@ -44,8 +44,8 @@ Or install as an isolated CLI tool via [pipx](https://pypa.github.io/pipx/):
 pipx install .
 ```
 
-### Option 2: Copy to User Bin
-Install into your virtual environment and copy the executable to `~/.local/bin`:
+### Option 2: Standalone User Executable
+Build and install a standalone, self-contained executable to `~/.local/bin` (using Python's built-in `zipapp`, requiring no venv or cloned repo at runtime):
 ```bash
 make install-user
 ```

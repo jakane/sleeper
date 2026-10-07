@@ -23,7 +23,7 @@ help:
 	@echo "  build         Clean and build sdist and wheel packages"
 	@echo "  clean         Remove build artifacts and Python bytecode caches"
 	@echo "  distclean     Run clean and remove .venv directory"
-	@echo "  install-user  Copy sleeper executable to ~/.local/bin"
+	@echo "  install-user  Build and install standalone sleeper executable to ~/.local/bin"
 
 $(VENV)/bin/activate:
 	$(PYTHON) -m venv $(VENV)
@@ -51,9 +51,9 @@ clean:
 distclean: clean
 	rm -rf $(VENV)
 
-install-user: install
+install-user:
 	mkdir -p $(HOME)/.local/bin
 	rm -f $(HOME)/.local/bin/sleeper
-	cp -f $(VENV)/bin/sleeper $(HOME)/.local/bin/sleeper
+	$(PYTHON) -m zipapp src -m "sleeper.cli:main" -p "/usr/bin/env python3" -o $(HOME)/.local/bin/sleeper
 	chmod +x $(HOME)/.local/bin/sleeper
-	@echo "Copied sleeper executable to $(HOME)/.local/bin/sleeper"
+	@echo "Installed standalone sleeper executable to $(HOME)/.local/bin/sleeper"
