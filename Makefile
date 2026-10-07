@@ -27,6 +27,7 @@ help:
 
 $(VENV)/bin/activate:
 	$(PYTHON) -m venv $(VENV)
+	$(VENV_PIP) install setuptools wheel build
 
 venv: $(VENV)/bin/activate
 
